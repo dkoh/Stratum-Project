@@ -12,11 +12,11 @@ import random, Forest, math, treepredictstratum
 
 
 
-
+# Code to test Forest.py
 #dummydata, featureNames=Forest.read_data('StephenMarsland/breast.csv',1)
 #Forest.randomForest(dummydata,50)
 
-
+#This code transform stratum data to its independent variables
 def transformstratum(data):
 	returndata = data[:] #create a copy of input data
 	column_count=len(data[0])
@@ -41,7 +41,7 @@ def transformstratum(data):
 # 	return returndata
 
 
-dummydata, featureNames=Forest.read_data('dummydata_10.csv')
+dummydata, featureNames=Forest.read_data('dummydata.csv')
 dummydata1=[[int(random.random()*100) for i in xrange(20)] for j in xrange(len(dummydata))]
 for i in xrange(len(dummydata)):
 	dummydata1[i][0]=dummydata[i][0]
@@ -56,13 +56,10 @@ dummydata1=transformstratum(dummydata1)
 
 for row in dummydata: print row[2:4]
 treepredictstratum.randomForest(dummydata,500)
+treepredictstratum.randomForest(dummydata,500)
 
-treepredictstratum.randomForest(dummydata1,500)
 
 
-#####
-
-#dummydata=[[1,5,3,4]]
 
 # primes = [x for x in range(2, 50) if x not in noprimes]
 
