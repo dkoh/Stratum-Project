@@ -41,7 +41,7 @@ def transformstratum(data):
 # 	return returndata
 
 
-dummydata, featureNames=Forest.read_data('dummydata.csv')
+dummydata, featureNames=Forest.read_data('dummydata_10.csv')
 dummydata1=[[int(random.random()*100) for i in xrange(20)] for j in xrange(len(dummydata))]
 for i in xrange(len(dummydata)):
 	dummydata1[i][0]=dummydata[i][0]
@@ -54,9 +54,14 @@ for i in xrange(len(dummydata)):
 dummydata=transformstratum(dummydata)
 dummydata1=transformstratum(dummydata1)
 
-for row in dummydata: print row[2:4]
-treepredictstratum.randomForest(dummydata,500)
-treepredictstratum.randomForest(dummydata,500)
+#for row in dummydata: print row[2:4]
+sim_mat= treepredictstratum.randomForest(dummydata,50)
+for row in sim_mat: print row
+newcluster=treepredictstratum.hcluster(sim_mat)
+#treepredictstratum.printclust(newcluster)
+#treepredictstratum.randomForest(dummydata,500)
+
+
 
 
 

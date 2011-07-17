@@ -221,9 +221,8 @@ def randomForest(data,trees_number):
 	#classifiedvalues=map(getmax,classifiedvalues)
 	#calcerror(classifiedvalues,data)
 	row_count=len(data)
-	blah=[[ reduce(lambda a, b: a + b, map(lambda x: proximity(data[i],data[j],x),forest)) for i in xrange(j+1)] for j in xrange(row_count)]
-	for row in blah:
-		print row
+	SimilarityMatrix=[[ reduce(lambda a, b: a + b, map(lambda x: proximity(data[i],data[j],x),forest)) for i in xrange(j+1)] for j in xrange(row_count)]
+	return SimilarityMatrix
 
 
 def buildForest(data):# will need to use this in the future to get OOB
@@ -284,3 +283,82 @@ def buildtree(rows,mtry=None):
 		return decisionnode(col=best_criteria[0],value=best_criteria[1],tb=trueBranch,fb=falseBranch)
 	else:
 		return decisionnode(results=finaluniquecounts(rows,min_var))
+		
+		
+		
+		
+#Creation of clusters
+class DistanceMatrix:
+	def __init__(self, matrix):
+		self.matrix=matrix
+	def getclusterdistance(self, cluster1, cluster2): #inputs are lists
+		dist=0
+		divisor= 1.0/(len(cluster1) * len(cluster2))
+		for i in xrange(len(cluster1)):
+			for j in xrange(len(cluster2)):
+				dist+=self.getrowdistance(cluster1[i],cluster2[j])/divisor
+		return dist
+	
+	def getrowdistance(self, row1, row2):
+		if row1 > row2:
+			return self.matrix[row1][row2]
+		else:
+			return self.matrix[row2][row1]
+		
+class bicluster:
+	def __init__(self,members,left=None,right=None,distance=None,id=None):
+		self.members=members
+		self.left=left
+		self.right=right
+		self.id=id
+		self.distance=distance
+
+def hcluster(rows):
+	currentclustid=-1
+
+	 # Clusters are initially just the rows
+	clust=[bicluster([i],id=i) for i in xrange(len(rows))]
+	CurrentMatrix=DistanceMatrix(rows)
+	distances={}
+	while len(clust)>1:
+		lowestpair=(0,1)
+		closest=CurrentMatrix.getclusterdistance(clust[0].members,clust[1].members)
+		# loop through every pair looking for the smallest distance
+		for i in range(len(clust)):
+			for j in range(i+1,len(clust)):
+				# distances is the cache of distance calculations
+				if (clust[i].id,clust[j].id) not in distances: 
+					distances[(clust[i].id,clust[j].id)]=CurrentMatrix.getclusterdistance(clust[i].members,clust[j].members)
+				d=distances[(clust[i].id,clust[j].id)]
+				if d>closest:
+					closest=d
+					lowestpair=(i,j)
+		# calculate the average of the two clusters
+		mergevec=clust[lowestpair[0]].members
+		mergevec.extend(clust[lowestpair[1]].members)
+		print clust[lowestpair[0]].id, clust[lowestpair[1]].id
+		# create the new cluster
+		newcluster=bicluster(mergevec, left=clust[lowestpair[0]], right=clust[lowestpair[1]], distance=closest, id=currentclustid)
+		
+		# cluster ids that weren't in the original set are negative
+		currentclustid-=1
+		del clust[lowestpair[1]]
+		del clust[lowestpair[0]]
+		clust.append(newcluster)
+	for i in  distances: print i, distances[i]
+	return clust[0]
+		
+def printclust(clust,labels=None,n=0):
+	# indent to make a hierarchy layout
+	for i in range(n): print ' ',
+	if clust.id<0:
+	 	# negative id means that this is branch
+		print '-'
+	else:
+	  	# positive id means that this is an endpoint
+		if labels==None: print clust.id
+		else: print labels[clust.id]
+
+	# now print the right and left branches
+	if clust.left!=None: printclust(clust.left,labels=labels,n=n+1)
+	if clust.right!=None: printclust(clust.right,labels=labels,n=n+1)
