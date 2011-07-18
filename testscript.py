@@ -7,7 +7,7 @@ Created by Derek Koh on 2011-07-07.
 Copyright (c) 2011 __MyCompanyName__. All rights reserved.
 """
 
-import random, Forest, math, treepredictstratum
+import random, Forest, math, treepredictstratum, clusters
 
 
 
@@ -54,11 +54,15 @@ for i in xrange(len(dummydata)):
 dummydata=transformstratum(dummydata)
 dummydata1=transformstratum(dummydata1)
 
-#for row in dummydata: print row[2:4]
-sim_mat= treepredictstratum.randomForest(dummydata,50)
+for row in dummydata: print row[2:4]
+sim_mat= treepredictstratum.stratumForest(dummydata,100)
 for row in sim_mat: print row
 newcluster=treepredictstratum.hcluster(sim_mat)
-#treepredictstratum.printclust(newcluster)
+labels=[str(i) for i in xrange(len(dummydata))]
+clusters.drawdendrogram(newcluster,labels,jpeg='smallclust.jpg')
+
+
+
 #treepredictstratum.randomForest(dummydata,500)
 
 
