@@ -7,22 +7,18 @@ class decisionnode:
 		self.tb=tb
 		self.fb=fb
 
-# Divides a set on a specific column. Can handle numeric
-# or nominal values
+# Divides a set on a specific column.
 def divideset(rows,column,value):
-   # Make a function that tells us if a row is in 
-   # the first group (true) or the second group (false)
+   # Make a function that tells us if a row is in the first group (true) or the second group (false)
    split_function=None
    if isinstance(value,int) or isinstance(value,float):
       split_function=lambda row:row[column]>=value
    else:
-      split_function=lambda row:row[column]==value
-   
+      split_function=lambda row:row[column]==value   
    # Divide the rows into two sets and return them
    set1=[row for row in rows if split_function(row)]
    set2=[row for row in rows if not split_function(row)]
    return (set1,set2)
-
 
 # Create counts of possible results based on the corresponding response variable
 def uniquecounts(rows,colindex):
@@ -34,6 +30,7 @@ def uniquecounts(rows,colindex):
       results[r]+=1
    return results
 
+#This is only used for the leaf node to return the x used and the freq of the response
 def finaluniquecounts(rows,purevar):
 	colindex=len(rows[0])/2 +purevar 
 	results={}
@@ -41,11 +38,9 @@ def finaluniquecounts(rows,purevar):
 		r=row[colindex]
 		if r not in results: results[r]=0
 		results[r]+=1
-#	results=[purevar,results] #makes the return variable, classification
 	return [purevar, results]
 
-# Entropy is the sum of p(x)log(p(x)) across all 
-# the different possible results
+# Entropy is the sum of p(x)log(p(x)) 
 def entropy(rows, colindex):
    from math import log
    log2=lambda x:log(x)/log(2)  
@@ -56,9 +51,6 @@ def entropy(rows, colindex):
       p=float(results[r])/len(rows)
       ent=ent-p*log2(p)
    return ent
-
-
-
 
 def printtree(tree,indent=''):
    # Is this a leaf node?
@@ -74,53 +66,7 @@ def printtree(tree,indent=''):
       print indent+'F->',
       printtree(tree.fb,indent+'  ')
 
-
-def getwidth(tree):
-  if tree.tb==None and tree.fb==None: return 1
-  return getwidth(tree.tb)+getwidth(tree.fb)
-
-def getdepth(tree):
-  if tree.tb==None and tree.fb==None: return 0
-  return max(getdepth(tree.tb),getdepth(tree.fb))+1
-
-
-from PIL import Image,ImageDraw
-
-def drawtree(tree,jpeg='tree.jpg'):
-  w=getwidth(tree)*100
-  h=getdepth(tree)*100+120
-
-  img=Image.new('RGB',(w,h),(255,255,255))
-  draw=ImageDraw.Draw(img)
-
-  drawnode(draw,tree,w/2,20)
-  img.save(jpeg,'JPEG')
-  
-def drawnode(draw,tree,x,y):
-  if tree.results==None:
-    # Get the width of each branch
-    w1=getwidth(tree.fb)*100
-    w2=getwidth(tree.tb)*100
-
-    # Determine the total space required by this node
-    left=x-(w1+w2)/2
-    right=x+(w1+w2)/2
-
-    # Draw the condition string
-    draw.text((x-20,y-10),str(tree.col)+':'+str(tree.value),(0,0,0))
-
-    # Draw links to the branches
-    draw.line((x,y,left+w1/2,y+100),fill=(255,0,0))
-    draw.line((x,y,right-w2/2,y+100),fill=(255,0,0))
-    
-    # Draw the branch nodes
-    drawnode(draw,tree.fb,left+w1/2,y+100)
-    drawnode(draw,tree.tb,right-w2/2,y+100)
-  else:
-    txt=' \n'.join(['%s:%d'%v for v in tree.results.items()])
-    draw.text((x-20,y),txt,(0,0,0))
-
-
+#Classifies the Tree
 def classify(observation,tree):
   if tree.results!=None:
     return tree.results
@@ -135,6 +81,7 @@ def classify(observation,tree):
       else: branch=tree.fb
     return classify(observation,branch)
 
+#Returns 1 if 2 rows are in the same leaf in the tree and 0 o/w
 def proximity(obs1,obs2,tree):
 	if tree.results!=None:
 		return 1
@@ -151,61 +98,6 @@ def proximity(obs1,obs2,tree):
 		if branch ==None: return 0
 		else: return proximity(obs1,obs2,branch)
 
-def prune(tree,mingain):
-  # If the branches aren't leaves, then prune them
-  if tree.tb.results==None:
-    prune(tree.tb,mingain)
-  if tree.fb.results==None:
-    prune(tree.fb,mingain)
-    
-  # If both the subbranches are now leaves, see if they
-  # should merged
-  if tree.tb.results!=None and tree.fb.results!=None:
-    # Build a combined dataset
-    tb,fb=[],[]
-    for v,c in tree.tb.results.items():
-      tb+=[[v]]*c
-    for v,c in tree.fb.results.items():
-      fb+=[[v]]*c
-    
-    # Test the reduction in entropy
-    delta=entropy(tb+fb)-(entropy(tb)+entropy(fb)/2)
-
-    if delta<mingain:
-      # Merge the branches
-      tree.tb,tree.fb=None,None
-      tree.results=uniquecounts(tb+fb)
-
-def mdclassify(observation,tree):
-  if tree.results!=None:
-    return tree.results
-  else:
-    v=observation[tree.col]
-    if v==None:
-      tr,fr=mdclassify(observation,tree.tb),mdclassify(observation,tree.fb)
-      tcount=sum(tr.values())
-      fcount=sum(fr.values())
-      tw=float(tcount)/(tcount+fcount)
-      fw=float(fcount)/(tcount+fcount)
-      result={}
-      for k,v in tr.items(): result[k]=v*tw
-      for k,v in fr.items(): result[k]=v*fw      
-      return result
-    else:
-      if isinstance(v,int) or isinstance(v,float):
-        if v>=tree.value: branch=tree.tb
-        else: branch=tree.fb
-      else:
-        if v==tree.value: branch=tree.tb
-        else: branch=tree.fb
-      return mdclassify(observation,branch)
-
-def variance(rows):
-  if len(rows)==0: return 0
-  data=[float(row[len(row)-1]) for row in rows]
-  mean=sum(data)/len(data)
-  variance=sum([(d-mean)**2 for d in data])/len(data)
-  return variance
 #Creates a boostrap sample of the rows
 def sample_wr(population, k):
 	"Chooses k random elements (with replacement) from a population"
@@ -213,23 +105,17 @@ def sample_wr(population, k):
 	_random, _int = random.random, int  # speed hack
 	return [ population[j] for j in [_int(_random() * n) for i in xrange(k)]]
 
-def randomForest(data,trees_number):
-#	forest=map(lambda x : buildtree(sample_wr(data,len(data))), xrange(trees_number) )
+#main function for stratum forest
+def stratumForest(data,trees_number):
 	forest=[buildtree(sample_wr(data,len(data))) for i in xrange(trees_number)] #builds a list of trees
-	#classifiedvalues=map(classifyrows,[data]*len(forest),forest) #classifies data with list of trees
-	#classifiedvalues=map(uniquecounts,zip(*classifiedvalues))
-	#classifiedvalues=map(getmax,classifiedvalues)
-	#calcerror(classifiedvalues,data)
 	row_count=len(data)
 	SimilarityMatrix=[[ reduce(lambda a, b: a + b, map(lambda x: proximity(data[i],data[j],x),forest)) for i in xrange(j+1)] for j in xrange(row_count)]
 	return SimilarityMatrix
-
 
 def buildForest(data):# will need to use this in the future to get OOB
 	rows=sample_wr(data, len(data))	
 	#oob=[ i for i in data if i not in rows]
 	return buildtree(rows)
-
 
 #takes a list with the len/2 predictors and the other half of the dataset is the response
 def buildtree(rows,mtry=None):
@@ -284,16 +170,13 @@ def buildtree(rows,mtry=None):
 	else:
 		return decisionnode(results=finaluniquecounts(rows,min_var))
 		
-		
-		
-		
-#Creation of clusters
+#Loads the main distance matrix
 class DistanceMatrix:
 	def __init__(self, matrix):
 		self.matrix=matrix
 	def getclusterdistance(self, cluster1, cluster2): #inputs are lists
 		dist=0
-		divisor= 1.0/(len(cluster1) * len(cluster2))
+		divisor= (len(cluster1) * len(cluster2))
 		for i in xrange(len(cluster1)):
 			for j in xrange(len(cluster2)):
 				dist+=self.getrowdistance(cluster1[i],cluster2[j])/divisor
@@ -304,7 +187,8 @@ class DistanceMatrix:
 			return self.matrix[row1][row2]
 		else:
 			return self.matrix[row2][row1]
-		
+	
+#Class for each node of the cluster	
 class bicluster:
 	def __init__(self,members,left=None,right=None,distance=None,id=None):
 		self.members=members
@@ -313,6 +197,7 @@ class bicluster:
 		self.id=id
 		self.distance=distance
 
+#Main algorithm for clustering
 def hcluster(rows):
 	currentclustid=-1
 
@@ -336,7 +221,6 @@ def hcluster(rows):
 		# calculate the average of the two clusters
 		mergevec=clust[lowestpair[0]].members
 		mergevec.extend(clust[lowestpair[1]].members)
-		print clust[lowestpair[0]].id, clust[lowestpair[1]].id
 		# create the new cluster
 		newcluster=bicluster(mergevec, left=clust[lowestpair[0]], right=clust[lowestpair[1]], distance=closest, id=currentclustid)
 		
@@ -345,20 +229,5 @@ def hcluster(rows):
 		del clust[lowestpair[1]]
 		del clust[lowestpair[0]]
 		clust.append(newcluster)
-	for i in  distances: print i, distances[i]
+#	for i in  distances: print i, distances[i]
 	return clust[0]
-		
-def printclust(clust,labels=None,n=0):
-	# indent to make a hierarchy layout
-	for i in range(n): print ' ',
-	if clust.id<0:
-	 	# negative id means that this is branch
-		print '-'
-	else:
-	  	# positive id means that this is an endpoint
-		if labels==None: print clust.id
-		else: print labels[clust.id]
-
-	# now print the right and left branches
-	if clust.left!=None: printclust(clust.left,labels=labels,n=n+1)
-	if clust.right!=None: printclust(clust.right,labels=labels,n=n+1)
