@@ -6,15 +6,15 @@ TestAsym.py
 Created by Derek Koh on 2011-07-19.
 Copyright (c) 2011 __MyCompanyName__. All rights reserved.
 """
+import AsymForest
 
-import sys
-import os
-
-
-def main():
-	pass
+#data, features = AsymForest.read_data("StephenMarsland/iris.csv")
+#print data
 
 
-if __name__ == '__main__':
-	main()
 
+from scipy.io import arff
+data, meta = arff.loadarff('arffFiles/wine.arff')
+print meta
+print len(data)
+#AsymForest.randomForest(data,1)

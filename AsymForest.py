@@ -14,7 +14,7 @@ def read_data(filename,stringonly=0):
 	import csv
 	data = list(csv.reader(open(filename, "rb")))
 	featureNames = data[0]
-	featureNames = data[:-1]
+	featureNames = featureNames[:-1]
 	featureNames= dict(zip(range(len(featureNames)), featureNames))
 	data = data[1:]
 	if stringonly==0:
