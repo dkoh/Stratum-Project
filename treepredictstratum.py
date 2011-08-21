@@ -110,7 +110,10 @@ def stratumForest(data,trees_number):
 	forest=[buildtree(sample_wr(data,len(data))) for i in xrange(trees_number)] #builds a list of trees
 	row_count=len(data)
 	SimilarityMatrix=[[ reduce(lambda a, b: a + b, map(lambda x: proximity(data[i],data[j],x),forest)) for i in xrange(j+1)] for j in xrange(row_count)]
-	return SimilarityMatrix
+ 	clusters= hcluster(SimilarityMatrix,10) #Start clustering agorithm
+	return reduce(lambda a, b: dict(a.items() + b.items()), [{i:clusters[i].members} for i in xrange(len(clusters))])
+	
+
 
 def buildForest(data):# will need to use this in the future to get OOB
 	rows=sample_wr(data, len(data))	
@@ -198,14 +201,14 @@ class bicluster:
 		self.distance=distance
 
 #Main algorithm for clustering
-def hcluster(rows):
+def hcluster(rows,clustercount):
 	currentclustid=-1
-
+	
 	 # Clusters are initially just the rows
 	clust=[bicluster([i],id=i) for i in xrange(len(rows))]
 	CurrentMatrix=DistanceMatrix(rows)
 	distances={}
-	while len(clust)>1:
+	while len(clust)>clustercount:
 		lowestpair=(0,1)
 		closest=CurrentMatrix.getclusterdistance(clust[0].members,clust[1].members)
 		# loop through every pair looking for the smallest distance
@@ -230,4 +233,16 @@ def hcluster(rows):
 		del clust[lowestpair[0]]
 		clust.append(newcluster)
 #	for i in  distances: print i, distances[i]
-	return clust[0]
+	return clust
+
+
+def logisticregressionR(data):
+	data1=zip(*data)
+	features=['col{0}'.format(i) for i in xrange(len(data[0]))]
+	columns=[robjects.FloatVector(col) for col in data1]
+	Rdata = robjects.r['data.frame'](**dict(zip(features,columns)))
+	Rformula =  robjects.r['as.formula']('{0} ~ {1} -1'.format(features[-1],reduce(lambda x,y: x + '+' +  y, features[:-1] )))
+	rpart_params = {'formula' : Rformula, 'data' : Rdata, 'family' : "binomial"}
+	model=robjects.r.glm(**rpart_params)
+	return (model[9],model[10])
+	

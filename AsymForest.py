@@ -1,24 +1,27 @@
 import math, random 
 class decisionnode:
-  def __init__(self,col=-1,value=None,results=None,tb=None,fb=None):
-    self.col=col
-    self.value=value
-    self.results=results
-    self.tb=tb
-    self.fb=fb
+	def __init__(self,col=-1,value=None,results=None,tb=None,fb=None,puritychg={}):
+		self.col=col
+		self.value=value
+		self.results=results
+		self.tb=tb
+		self.fb=fb
+		self.puritychg=puritychg
 
 
 
 #Reads csv data in 
-def read_data(filename,stringonly=0):
+def read_data(filename,stringonly=0,dependantvar=-99):
 	import csv
 	data = list(csv.reader(open(filename, "rb")))
+	if dependantvar != -99:
+		for row in data:
+			row.append(row.pop(dependantvar))
 	featureNames = data[0]
-	featureNames = featureNames[:-1]
 	featureNames= dict(zip(range(len(featureNames)), featureNames))
 	data = data[1:]
 	if stringonly==0:
-		columns= [data[0].index(x) for x in data[0]  if is_number(x)]
+		columns= [x for x in xrange(len(data[0]))  if is_number(data[0][x])]
 		data= tofloat(data,columns)
 	return data,featureNames
 
@@ -75,17 +78,16 @@ def uniquecounts(rows):
 
 # Probability that a randomly placed item will
 # be in the wrong category
-def giniimpurity(rows):
-  total=len(rows)
-  counts=uniquecounts(rows)
-  imp=0
-  for k1 in counts:
-    p1=float(counts[k1])/total
-    for k2 in counts:
-      if k1==k2: continue
-      p2=float(counts[k2])/total
-      imp+=p1*p2
-  return imp
+def giniimpurity(rows, bias=1):
+	total=len(rows)
+	counts=uniquecounts(rows)
+	if sorted(counts, key=counts.__getitem__, reverse=True)[0]== 1:
+		return 1 - (float(counts[1])/total)
+	else:
+		gini=0.0
+		for k1 in counts:
+			gini+=(float(counts[k1])/total)**2
+		return 1-gini
 
 # Entropy is the sum of p(x)log(p(x)) across all 
 # the different possible results
@@ -256,8 +258,35 @@ def randomForest(data,trees_number):
 	classifiedvalues=map(uniquecounts,zip(*classifiedvalues))
 	classifiedvalues=map(getmax,classifiedvalues)
 	calcerror(classifiedvalues,data)
+	#print reduce(lambda x, y: x+y,map(getTotalGain,forest))
+	print consolidateinfoGains(map(getTotalGain,forest))
+	
+def consolidateinfoGains(forestpredictors):
+	predictors={}
+	for treepredictors in forestpredictors:
+		for r in treepredictors:
+			if r not in predictors: predictors[r]=0
+			predictors[r]+=treepredictors[r]
+	return predictors
 
-
+def getTotalGain(tree):
+	if tree.results !=None:
+		return {}
+	else:
+		tb=getTotalGain(tree.tb)
+		fb=getTotalGain(tree.fb)
+		results= dict(tree.puritychg.items()+tb.items() + fb.items()).keys() 
+		results=dict(zip(results,[0]*len(results)))
+		for i in results: 
+			if i in tb: results[i]+=tb[i]
+			if i in fb: results[i]+=fb[i]
+			if i in tree.puritychg: results[i]+=tree.puritychg[i]
+		return results
+	
+def getwidth(tree):
+  if tree.tb==None and tree.fb==None: return 1
+  return getwidth(tree.tb)+getwidth(tree.fb)	
+	
 def buildForest(data):
 	rows=sample_wr(data, len(data))	
 	oob=[ i for i in data if i not in rows]
@@ -300,6 +329,6 @@ def buildtree(rows,scoref=entropy):
     trueBranch=buildtree(best_sets[0])
     falseBranch=buildtree(best_sets[1])
     return decisionnode(col=best_criteria[0],value=best_criteria[1],
-                        tb=trueBranch,fb=falseBranch)
+                        tb=trueBranch,fb=falseBranch,puritychg={best_criteria[0]:best_gain})
   else:
     return decisionnode(results=uniquecounts(rows))
