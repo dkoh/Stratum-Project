@@ -4,11 +4,17 @@
 TestAsym.py
 
 Created by Derek Koh on 2011-07-19.
-Copyright (c) 2011 __MyCompanyName__. All rights reserved.
+
 """
 import AsymForest
 # 
 data, features = AsymForest.read_data("StephenMarsland/iris.csv")
+
+
+# blah=[[0]]*4 + [[1]]*6
+# print AsymForest.giniimpurity(blah)
+
+
 AsymForest.randomForest(data,10)
 
 # 

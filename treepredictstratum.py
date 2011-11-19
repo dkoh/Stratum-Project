@@ -1,4 +1,5 @@
 import math, random
+import rpy2.robjects as robjects
 class decisionnode:
 	def __init__(self,col=-1,value=None,results=None,tb=None,fb=None):
 		self.col=col
@@ -236,6 +237,7 @@ def hcluster(rows,clustercount):
 	return clust
 
 
+#Vanilla CLR
 def logisticregressionR(data):
 	data1=zip(*data)
 	features=['col{0}'.format(i) for i in xrange(len(data[0]))]
@@ -244,5 +246,26 @@ def logisticregressionR(data):
 	Rformula =  robjects.r['as.formula']('{0} ~ {1} -1'.format(features[-1],reduce(lambda x,y: x + '+' +  y, features[:-1] )))
 	rpart_params = {'formula' : Rformula, 'data' : Rdata, 'family' : "binomial"}
 	model=robjects.r.glm(**rpart_params)
-	return (model[9],model[10])
+	return model.rx('aic')[0][0],model.rx('deviance')[0][0]
+
+
+#This function transform stratum data to its independent variables
+def transformstratum(data, clrformat=0):
+	from copy import deepcopy  
+	returndata = deepcopy(data) #create a copy of input data
+	column_count=len(data[0])
+	column_count_half=column_count/2
+	if clrformat ==0:
+		for row in returndata:
+			for i in range(column_count_half):
+				if row[i] < row[i+column_count_half]: 
+					row[i+column_count_half]=1
+				else: row[i+column_count_half]=0
+	else:
+		for row in returndata:
+			for i in range(column_count_half):
+				row[i+column_count_half]=row[i+column_count_half]-float(row[i])
+				
+		returndata=[row[column_count_half:] + [1] for row in returndata]
+	return returndata
 	

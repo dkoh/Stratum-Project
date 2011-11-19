@@ -11,7 +11,7 @@ import random, csv
 random.seed(1234567890)
 
 def createstratumdata(obs):
-	newdata=[['a','b','c','d']]
+	newdata=[['controlX','controlY','caseX','caseY']]
 	for i in xrange(obs):
 		location=[random.random()*10,random.random()*10,0,0]
 		if random.random() < .9:
@@ -36,10 +36,10 @@ def createstratumdata(obs):
 	for row in newdata:
 		outputwriter.writerow(row)
 
-createstratumdata(500)
+# createstratumdata(500)
 
 def createVanilladata(obs):
-	newdata=[['a','b','c','d']]
+	newdata=[['controlX','controlY','caseX','caseY']]
 	for i in xrange(obs):
 		location=[random.random()*10,random.random()*10,0,0]
 		if random.random() < .9:
@@ -53,4 +53,26 @@ def createVanilladata(obs):
 	for row in newdata:
 		outputwriter.writerow(row)
 
-createVanilladata(500)
+# createVanilladata(500)
+
+def createAsymmetricdata(obs,numberofpredictors):	
+	obs=1000
+	Key= [[max(.5,random.random()), max(.5,random.random())] for i in xrange(numberofpredictors)]
+
+	Initial_Conditions=[0]*int(obs/2) +[1]*int(obs/2)
+
+	Dataset = [
+	    [i] + [
+	        i if random.random() < k[i] else 1 - i
+	        for k in Key
+	    ]
+	    for i in Initial_Conditions
+	]
+
+	Key= [[round(y,2) for y in x] for x in Key]
+	Key= zip(*Key) 
+	Dataset=[[0]+list(Key[0]),[1]+list(Key[1])]+ Dataset	
+	outputwriter=csv.writer(open('Asymmetricdata.csv', 'wb'))
+	for row in Dataset:
+		outputwriter.writerow(row)
+createAsymmetricdata(1000,50)

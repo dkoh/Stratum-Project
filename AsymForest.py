@@ -79,15 +79,17 @@ def uniquecounts(rows):
 # Probability that a randomly placed item will
 # be in the wrong category
 def giniimpurity(rows, bias=1):
-	total=len(rows)
-	counts=uniquecounts(rows)
-	if sorted(counts, key=counts.__getitem__, reverse=True)[0]== 1:
-		return 1 - (float(counts[1])/total)
-	else:
-		gini=0.0
-		for k1 in counts:
-			gini+=(float(counts[k1])/total)**2
-		return 1-gini
+  total=len(rows)
+  if total <=1: return 0
+  else:
+    counts=uniquecounts(rows)
+    if sorted(counts, key=counts.__getitem__, reverse=True)[0]== bias:
+    	return 1 - (float(counts[1])/total)
+    else:
+    	gini=0.0
+    	for k1 in counts:
+    		gini+=(float(counts[k1])/total)**2
+    return 1-gini
 
 # Entropy is the sum of p(x)log(p(x)) across all 
 # the different possible results
@@ -324,6 +326,7 @@ def buildtree(rows,scoref=entropy):
         best_gain=gain
         best_criteria=(col,value)
         best_sets=(set1,set2)
+
   # Create the sub branches   
   if best_gain>0:
     trueBranch=buildtree(best_sets[0])
