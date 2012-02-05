@@ -399,3 +399,22 @@ def buildtree(rows,scoref=entropy):
                         tb=trueBranch,fb=falseBranch)
   else:
     return decisionnode(results=uniquecounts(rows))
+
+
+
+def classifyData(rows,tree):
+	return map(classify, rows,[tree]*len(rows))
+if __name__=='__main__':
+	newtree=buildtree(iris_data)
+	accuracy=0
+	for row in iris_data:
+		classifiedrow=classify(row,newtree)
+	#	print classifiedrow.keys()[0], row[len(row)-1]
+		if classifiedrow.keys()[0]==row[len(row)-1]:
+			accuracy=accuracy+1
+	print accuracy, len(iris_data)
+	# classifiedData=classifyData(iris_data,newtree)
+	# for i in classifiedData:
+	# 	print i
+	printtree(newtree)
+	

@@ -55,9 +55,8 @@ def createVanilladata(obs):
 
 # createVanilladata(500)
 
-def createAsymmetricdata(obs,numberofpredictors):	
-	obs=1000
-	Key= [[max(.5,random.random()), max(.5,random.random())] for i in xrange(numberofpredictors)]
+def createAsymmetricdata(obs):	
+	Key=[[.9,.9],[.97,.15],[.15,.97],[.9,.5],[.5,.9]] + [[.5,.5] for i in xrange(10)]
 
 	Initial_Conditions=[0]*int(obs/2) +[1]*int(obs/2)
 
@@ -69,10 +68,96 @@ def createAsymmetricdata(obs,numberofpredictors):
 	    for i in Initial_Conditions
 	]
 
-	Key= [[round(y,2) for y in x] for x in Key]
-	Key= zip(*Key) 
-	Dataset=[[0]+list(Key[0]),[1]+list(Key[1])]+ Dataset	
-	outputwriter=csv.writer(open('Asymmetricdata.csv', 'wb'))
+	Key= [str(x[0])+"/"+str(x[1]) for x in Key]
+	Dataset=[["0/1"]+ Key]+ Dataset	
+	outputwriter=csv.writer(open('Asymmetricdata1.csv', 'wb'))
 	for row in Dataset:
 		outputwriter.writerow(row)
-createAsymmetricdata(1000,50)
+
+	#printing probabilites of simulated dataset.
+	finalprob =dict([(i,(0,0)) for i in xrange(len(Dataset[0]))])
+	for i in finalprob.keys():
+		if i ==0: continue
+		ColumnsProb=[0.0,0.0,0.0,0.0]
+		for row in Dataset:
+			if row[i]==0 and row[0]==0: ColumnsProb[0]=ColumnsProb[0]+1
+			if row[i]==1 and row[0]==0: ColumnsProb[1]=ColumnsProb[1]+1
+			if row[i]==0 and row[0]==1: ColumnsProb[2]=ColumnsProb[2]+1
+			if row[i]==1 and row[0]==1: ColumnsProb[3]=ColumnsProb[3]+1
+		finalprob[i]=(ColumnsProb[3]/(ColumnsProb[3]+ColumnsProb[1]),ColumnsProb[0]/(ColumnsProb[0]+ColumnsProb[2]))
+	for i in finalprob:
+		print i, finalprob[i]
+
+#Used for figuring out the characteristics of data 
+#confusionMatrix(map(operator.itemgetter(0), data) ,map(operator.itemgetter(len(features)-1), data))
+def confusionMatrix(predictor, response, label=1):
+	returnmatrix=[0.0]*4
+	for i in xrange(len(predictor)):
+		if i== 0 and label==1: continue
+		if predictor[i]==1 and response[i]==1:
+			returnmatrix[0]=returnmatrix[0]+1
+		if predictor[i]==1 and response[i]==0:
+			returnmatrix[1]=returnmatrix[1]+1
+		if predictor[i]==0 and response[i]==1:
+			returnmatrix[2]=returnmatrix[2]+1
+		if predictor[i]==0 and response[i]==0:
+			returnmatrix[3]=returnmatrix[3]+1
+	print returnmatrix
+	summarymatrix= [returnmatrix[0]/(returnmatrix[0]+returnmatrix[1]),returnmatrix[1]/(returnmatrix[0]+returnmatrix[1]),returnmatrix[2]/(returnmatrix[2]+returnmatrix[3]),returnmatrix[3]/(returnmatrix[2]+returnmatrix[3])]		
+	summarymatrix=[round(i,2) for i in summarymatrix]
+	print summarymatrix
+
+#creates data with column 1 and 2 interaction creating a highly asymmetric power variable
+def asymmetricDatawithInteraction(obs):
+	Initial_Conditions=[0]*obs
+	testdata=[[0]+ [round(random.random()) for j in xrange(10)] for i in Initial_Conditions]
+	for row in testdata: 
+		if row[1]==1 and row[2]==1 and random.random() < .95: row[0]=1
+		else: row[0] = round(random.random())
+	print len(testdata[0])
+	for row in testdata:
+		if row[0]==1 : 
+			if random.random() <.9: 
+				row[3]=1
+			else:
+				row[3]=0
+		else:
+			if random.random() <.6: 
+				row[3]=0
+			else:
+				row[3]=1
+		if row[0]==1 : 
+			if random.random() <.5: 
+				row[4]=1
+			else:
+				row[4]=0
+		else:
+			if random.random() <.8: 
+				row[4]=0
+			else:
+				row[4]=1
+	outputwriter=csv.writer(open('Asymmetricdata2.csv', 'wb'))
+	for row in testdata:
+		outputwriter.writerow(row)
+	return testdata
+
+#random code
+testdata=asymmetricDatawithInteraction(1000)
+createAsymmetricdata(1000)
+
+#code to verify asymmetric data with interactions
+# import operator
+# confusionMatrix(map(operator.itemgetter(1), testdata) ,map(operator.itemgetter(0), testdata),0)
+# confusionMatrix(map(operator.itemgetter(2), testdata) ,map(operator.itemgetter(0), testdata),0)
+# confusionMatrix(map(operator.itemgetter(3), testdata) ,map(operator.itemgetter(0), testdata),0)
+# confusionMatrix(map(operator.itemgetter(4), testdata) ,map(operator.itemgetter(0), testdata),0)
+# for row in testdata:
+# 	if row[1]==1 and row[2]==1:
+# 		row[3]=1
+# 	else:
+# 		row[3]=0
+# confusionMatrix(map(operator.itemgetter(3), testdata) ,map(operator.itemgetter(0), testdata),0)
+	
+
+
+
