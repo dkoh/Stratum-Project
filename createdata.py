@@ -8,7 +8,7 @@ Copyright (c) 2011 __MyCompanyName__. All rights reserved.
 """
 
 import random, csv
-random.seed(1234567890)
+random.seed(123456780)
 
 def createstratumdata(obs):
 	newdata=[['controlX','controlY','caseX','caseY']]
@@ -69,7 +69,7 @@ def createAsymmetricdata(obs):
 	]
 
 	Key= [str(x[0])+"/"+str(x[1]) for x in Key]
-	Dataset=[["0/1"]+ Key]+ Dataset	
+	Dataset=[["Y"]+ Key]+ Dataset	
 	outputwriter=csv.writer(open('Asymmetricdata1.csv', 'wb'))
 	for row in Dataset:
 		outputwriter.writerow(row)
@@ -111,10 +111,9 @@ def confusionMatrix(predictor, response, label=1):
 def asymmetricDatawithInteraction(obs):
 	Initial_Conditions=[0]*obs
 	testdata=[[0]+ [round(random.random()) for j in xrange(10)] for i in Initial_Conditions]
-	for row in testdata: 
+	for row in testdata: #build interacting variables
 		if row[1]==1 and row[2]==1 and random.random() < .95: row[0]=1
 		else: row[0] = round(random.random())
-	print len(testdata[0])
 	for row in testdata:
 		if row[0]==1 : 
 			if random.random() <.9: 
@@ -143,7 +142,7 @@ def asymmetricDatawithInteraction(obs):
 
 #random code
 testdata=asymmetricDatawithInteraction(1000)
-createAsymmetricdata(1000)
+#createAsymmetricdata(1000)
 
 #code to verify asymmetric data with interactions
 # import operator
