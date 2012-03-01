@@ -56,7 +56,7 @@ def createVanilladata(obs):
 # createVanilladata(500)
 
 def createAsymmetricdata(obs):	
-	Key=[[.9,.9],[.97,.15],[.15,.97],[.9,.5],[.5,.9]] + [[.5,.5] for i in xrange(10)]
+	Key=[[.9,.9],[.97,.15],[.9,.5],[.8,.5],[.8,.6],[.7,.5],[.6,.5],[.15,.97],[.5,.9],[.5,.8],[.6,.8],[.5,.7],[.5,.6]] + [[.5,.5] for i in xrange(17)]
 
 	Initial_Conditions=[0]*int(obs/2) +[1]*int(obs/2)
 
@@ -68,13 +68,7 @@ def createAsymmetricdata(obs):
 	    for i in Initial_Conditions
 	]
 
-	Key= [str(x[0])+"/"+str(x[1]) for x in Key]
-	Dataset=[["Y"]+ Key]+ Dataset	
-	outputwriter=csv.writer(open('Asymmetricdata1.csv', 'wb'))
-	for row in Dataset:
-		outputwriter.writerow(row)
-
-	#printing probabilites of simulated dataset.
+	#printing Precision of simulated dataset.
 	finalprob =dict([(i,(0,0)) for i in xrange(len(Dataset[0]))])
 	for i in finalprob.keys():
 		if i ==0: continue
@@ -84,10 +78,17 @@ def createAsymmetricdata(obs):
 			if row[i]==1 and row[0]==0: ColumnsProb[1]=ColumnsProb[1]+1
 			if row[i]==0 and row[0]==1: ColumnsProb[2]=ColumnsProb[2]+1
 			if row[i]==1 and row[0]==1: ColumnsProb[3]=ColumnsProb[3]+1
-		finalprob[i]=(ColumnsProb[3]/(ColumnsProb[3]+ColumnsProb[1]),ColumnsProb[0]/(ColumnsProb[0]+ColumnsProb[2]))
+		finalprob[i]=(round(ColumnsProb[3]/(ColumnsProb[3]+ColumnsProb[1]),2),round(ColumnsProb[0]/(ColumnsProb[0]+ColumnsProb[2]),2))
 	for i in finalprob:
 		print i, finalprob[i]
-
+		
+	#Getting probability
+	Key= [str(finalprob[x][0])+"/"+str(finalprob[x][1]) for x in finalprob]
+	Dataset=[Key] + Dataset	
+	outputwriter=csv.writer(open('Asymmetricdata1.csv', 'wb'))
+	for row in Dataset:
+		outputwriter.writerow(row)
+		
 #Used for figuring out the characteristics of data 
 #confusionMatrix(map(operator.itemgetter(0), data) ,map(operator.itemgetter(len(features)-1), data))
 def confusionMatrix(predictor, response, label=1):
@@ -116,47 +117,44 @@ def asymmetricDatawithInteraction(obs):
 		else: row[0] = round(random.random())
 	for row in testdata:
 		if row[0]==1 : 
-			if random.random() <.9: 
-				row[3]=1
-			else:
-				row[3]=0
-		else:
-			if random.random() <.6: 
-				row[3]=0
-			else:
-				row[3]=1
-		if row[0]==1 : 
 			if random.random() <.5: 
-				row[4]=1
+				row[3]=1
 			else:
-				row[4]=0
+				row[3]=0
 		else:
-			if random.random() <.8: 
-				row[4]=0
+			if random.random() <.9: 
+				row[3]=0
 			else:
-				row[4]=1
+				row[3]=1
+		if random.random() < .99: row[4]=1
+		else: row[4]=0
+		if row[0]==0 : 
+			if random.random() <.1:
+				row[4]=0
 	outputwriter=csv.writer(open('Asymmetricdata2.csv', 'wb'))
 	for row in testdata:
 		outputwriter.writerow(row)
 	return testdata
 
-#random code
-testdata=asymmetricDatawithInteraction(1000)
-#createAsymmetricdata(1000)
 
-#code to verify asymmetric data with interactions
-# import operator
-# confusionMatrix(map(operator.itemgetter(1), testdata) ,map(operator.itemgetter(0), testdata),0)
-# confusionMatrix(map(operator.itemgetter(2), testdata) ,map(operator.itemgetter(0), testdata),0)
-# confusionMatrix(map(operator.itemgetter(3), testdata) ,map(operator.itemgetter(0), testdata),0)
-# confusionMatrix(map(operator.itemgetter(4), testdata) ,map(operator.itemgetter(0), testdata),0)
-# for row in testdata:
-# 	if row[1]==1 and row[2]==1:
-# 		row[3]=1
-# 	else:
-# 		row[3]=0
-# confusionMatrix(map(operator.itemgetter(3), testdata) ,map(operator.itemgetter(0), testdata),0)
+
+if __name__=="__main__":		
+#	testdata=asymmetricDatawithInteraction(1000)
+	createAsymmetricdata(5000)
 	
+	#code to verify asymmetric data with interactions
+#	import operator
+#	confusionMatrix(map(operator.itemgetter(1), testdata) ,map(operator.itemgetter(0), testdata),0)
+#	confusionMatrix(map(operator.itemgetter(2), testdata) ,map(operator.itemgetter(0), testdata),0)
+#	confusionMatrix(map(operator.itemgetter(3), testdata) ,map(operator.itemgetter(0), testdata),0)
+#	confusionMatrix(map(operator.itemgetter(4), testdata) ,map(operator.itemgetter(0), testdata),0)
+#	for row in testdata:
+#		if row[1]==1 and row[2]==1:
+#			row[3]=1
+#		else:
+#			row[3]=0
+#	confusionMatrix(map(operator.itemgetter(3), testdata) ,map(operator.itemgetter(0), testdata),0)
+#	
 
 
 
