@@ -38,31 +38,32 @@ def createstratumdata(obs):
 # createstratumdata(500)
 
 def createstratumdata2(obs):
-	vectorspace=10
+	vectorspace=5
 	control_data=[[random.random()*10 for i in xrange(vectorspace)] for n in xrange(obs)]
 	case_data=[[0 for i in xrange(vectorspace)] for n in xrange(obs)]
 	#Gamma sets the precision of the observation. (precision, plus or negative 1)
-	gamma=[(.9,1)]+[(.5,1)]*9
+	gamma=[(.9,1)]+[(.5,1)]*4
 	if len(gamma) !=  vectorspace: print "WARNING: CHECK GAMMA LENGTH"
 	finaldata=[]
 	for i in xrange(obs):
 		for j in xrange(vectorspace):
+#			if j==0 and (control_data[i][0]<2.5 or control_data[i][0]>7.5): #where it is not relevant makes case and control random
+#				if random.random() > .5: case_data[i][j]=control_data[i][j]+ .1*gamma[j][1]
+#				else:case_data[i][j]=control_data[i][j]- .1*gamma[j][1]
+#			if j==0 and (control_data[i][0]<2.5 or control_data[i][0]>7.5): #EXP3
+#				if random.random() < gamma[j][0]: case_data[i][j]=control_data[i][j]- .1*gamma[j][1]
+#				else:case_data[i][j]=control_data[i][j] + .1*gamma[j][1]
+				
+			#None of the conditions
 			if random.random() < gamma[j][0]: case_data[i][j]=control_data[i][j]+ .1*gamma[j][1]
 			else: case_data[i][j]=control_data[i][j] - .1*gamma[j][1]
 		finaldata.append(case_data[i]+control_data[i])
 	outputwriter=csv.writer(open('vanillapaireddata.csv', 'wb'))
-	labels=["a1","a2","a3","a4","a5","a6","a7","a8","a9","a10","b1","b2","b3","b4","b5","b6","b7","b8","b9","b10"]
+	labels=["a"+ str(i) for i in xrange(vectorspace)] + ["b"+ str(i) for i in xrange(vectorspace)] 
 	outputwriter.writerow(labels)
 	for row in finaldata:
 		outputwriter.writerow(row)
-		
-			
-		 
-	subspaces_count=10
-	relevant_vector=5
-	blah=[[(0,random.random()) for i in xrange(relevant_vector)] for i in xrange(subspaces_count)]
-	blah[1][1]=2
-	blah[3][4]=7
+
 
 
 def createVanilladata(obs):
@@ -226,7 +227,8 @@ if __name__=="__main__":
 	#createAsymmetricdata(5000)
 	
 	#code to verify asymmetric data with interactions
-	createstratumdata2(1000)
+	createstratumdata2(200)
+	import teststratum
 #	confusionMatrix(map(operator.itemgetter(1), testdata) ,map(operator.itemgetter(0), testdata),0)
 #	confusionMatrix(map(operator.itemgetter(2), testdata) ,map(operator.itemgetter(0), testdata),0)
 #	confusionMatrix(map(operator.itemgetter(3), testdata) ,map(operator.itemgetter(0), testdata),0)

@@ -8,13 +8,19 @@ class DecisionNode:
 		self.tb=tb
 		self.fb=fb
 		self.puritychg=puritychg
+	def getweightedresults(self):
+		return dict([(key,self.results[0]*self.results[1][key]) for key in self.results[1]])
+
+			
+		
 
 class MachineLearningObject(object):
 	def __init__(self, *args, **kwargs):
-		if 'readDataset' in kwargs:
-			self.data, self.features = read_data(*kwargs['readDataset'])
-		elif 'data' in kwargs:
-			self.data=kwargs['data']
+		if not hasattr(self, 'data'):
+			if 'readDataset' in kwargs:
+				self.data, self.features = read_data(*kwargs['readDataset'])
+			elif 'data' in kwargs:
+				self.data=kwargs['data']
 			
 	# Entropy is the sum of p(x)log(p(x)) across all 
 	# the different possible results
@@ -31,13 +37,13 @@ class MachineLearningObject(object):
 		
 	def giniimpurity(self,rows):
 		total=len(rows)
-		counts=uniquecounts(rows)
+		class_values=uniquecounts(rows)
 		imp=0
-		for k1 in counts:
-			p1=float(counts[k1])/total
-			for k2 in counts:
+		for k1 in class_values:
+			p1=float(class_values[k1])/total
+			for k2 in class_values:
 				if k1==k2: continue
-				p2=float(counts[k2])/total
+				p2=float(class_values[k2])/total
 				imp+=p1*p2
 		return imp
 				
@@ -241,7 +247,7 @@ class RandomForest(ClassificationTree):
 
 	def buildForest(self, data):
 		rows=sample_with_replacement(data, len(data))	
-		oob=[ i for i in data if i not in rows]
+#		oob=[ i for i in data if i not in rows]
 		return self.buildtree(rows,-1)
 
 class ForestVarSelection(RandomForest,VariableSelection):
@@ -418,121 +424,121 @@ class TestTrees(AsymForestVarSelection):
 		
 class ConditionalRandomForest(RandomForest):
 	def __init__(self,*args,**kwargs):
+		self.scoref=self.mGini
 		MachineLearningObject.__init__(self,**kwargs)
-		if not hasattr(self, 'scoref'):
-			self.scoref=self.entropy		
-		self.data=self.transformstratum(self.data,1)
-		self.number_of_trees=5
-		self.clusters= self.stratumForest()		
-		# self.finallist=[]
-		# for key in clusters:
-		# 	if len(clusters[key])>3: 
-		# 		finallist.append(logisticregressionR([logisticdata[i] for i in clusters[key]]))
-		# 	else: print 'Less than 3 obs in cluster'
-			
+		self.createDependentvars()
+		RandomForest.__init__(self,**kwargs)
+		self.variableimportance=self.consolidateinfoGains(map(self.getAvgGiniforTrees,self.classifier))
+		print [self.variableimportance[key]/(5.0*len(self.data)) for key in self.variableimportance]
+	#Consolidate information between trees in the forest
+	def consolidateinfoGains(self,forestpredictors):
+		predictors={}
+		for treepredictors in forestpredictors:
+			for r in treepredictors:
+				if r not in predictors: predictors[r]=0
+				predictors[r]+=treepredictors[r]
+		return predictors
 
-	def transformstratum(self,data, clrformat=0):
-		from copy import deepcopy  
-		returndata = deepcopy(data) #create a copy of input data
-		column_count=len(data[0])
-		column_count_half=column_count/2
-		if clrformat ==0:
-			for row in returndata:
-				for i in range(column_count_half):
-					if row[i] < row[i+column_count_half]: 
-						row[i+column_count_half]=1
-					else: row[i+column_count_half]=0
+
+	def getAvgGiniforTrees(self,tree):
+		if tree.results==None:
+			fb=self.getAvgGiniforTrees(tree.fb)
+			tb=self.getAvgGiniforTrees(tree.tb)
+			results= dict(tb.items() + fb.items()).keys() 
+			results=dict(zip(results,[0]*len(results)))
+			for i in results: 
+				if i in tb: results[i]+=tb[i]
+				if i in fb: results[i]+=fb[i]
+			return results
 		else:
-			for row in returndata:
-				for i in range(column_count_half):
-					row[i+column_count_half]=row[i+column_count_half]-float(row[i])
-
-			returndata=[row[column_count_half:] + [1] for row in returndata]
-		return returndata
+			return tree.getweightedresults()
+	def testtree(self,tree):
+		if tree.results==None:
+			if tree.fb==None: print "fb has none"
+			else: self.testtree(tree.fb)
+			if tree.tb==None: print "tb has none"
+			else: self.testtree(tree.tb)
+		else:
+			print tree.getweightedresults().items()
+		
+	#create the dependant var for each predictor	
+	def createDependentvars(self):
+		data=self.data
+		self.featurecount=len(data[0])/2
+		featurecount=self.featurecount
+		for i in xrange(len(data)):
+			y_dep=[ 0 for k1 in xrange(featurecount)]
+			for j in xrange(featurecount):
+				if data[i][j+featurecount] > data[i][j]: 
+					y_dep[j]=1
+				else:
+					y_dep[j]=-1
+			data[i]=data[i]+y_dep
+	#Returns the lowest gini based on all the responses
+	def mGini(self,rows):
+		featurecount=self.featurecount
+		bestimpurity=1
+		transposeddata=zip(*rows)
+		for i in xrange(featurecount):
+			candidateimpurity=self.giniimpurity(list(transposeddata[2*featurecount+i]))
+			if candidateimpurity< bestimpurity:
+				bestimpurity=candidateimpurity
+		return bestimpurity
 	
-	def stratumForest(self):
-		row_count=len(self.data)
-		forest=[self.buildtree(sample_with_replacement(self.data,row_count)) for i in xrange(self.number_of_trees)] #builds a list of trees
-		
-
-		print self.proximity(self.data[0],self.data[100],forest[0])
-		
-		# SimilarityMatrix=[[ reduce(lambda a, b: a + b, map(lambda x: self.proximity(self.data[i],self.data[j],x),forest)) for i in xrange(j+1)] for j in xrange(row_count)]
-		# print SimilarityMatrix
-		#  	clusters= hcluster(SimilarityMatrix,10) #Start clustering agorithm
-		# 	return reduce(lambda a, b: dict(a.items() + b.items()), [{i:clusters[i].members} for i in xrange(len(clusters))])
-
-	def proximity(self,obs1,obs2,tree):
-		if tree.results!=None:
-			return 1
-		else:
-			v=obs1[tree.col]
-			w=obs2[tree.col]
-			branch=None
-			if isinstance(v,int) or isinstance(v,float):
-				if v>=tree.value and w >=tree.value: branch=tree.tb
-				elif v < tree.value and w < tree.value: branch=tree.fb
-			else:
-				if v==tree.value and w==tree.value: branch=tree.tb
-				elif v!=tree.value and w!=tree.value: branch=tree.fb
-			if branch ==None: return 0
-			else: return proximity(obs1,obs2,branch)
-
-	def buildtree(self, rows,mtry=None):
-		if len(rows)==0: return decisionnode()
-
+	#Gets the Gini for all dependent vars
+	def leafGini(self,rows):
+		featurecount=self.featurecount
+		transposeddata=zip(*rows)
+		return dict([(i,self.giniimpurity(list(transposeddata[2*featurecount+i]))) for i in xrange(featurecount)])
+	
+	
+	def buildtree(self,rows, randomcolumns=None):		
+		if len(rows)==0: return DecisionNode()
+		current_score=self.scoref(rows)
+		if current_score == -99: current_score=.5
+		elif current_score==0: return DecisionNode(results=(len(rows),self.leafGini(rows)))
 		# Set up some variables to track the best criteria
 		best_gain=0.0
 		best_criteria=None
 		best_sets=None
-	  	min_var=-5
-		min_col_value=9999999999
-		column_count=len(rows[0])/2
-		#Get a Random Subset
-		if mtry==None: 
-			mtry1=int(math.sqrt(column_count-1)) 
-			columns=random.sample(range(column_count),mtry1)
-		else:  
-			columns=range(column_count)
+		featurecount=self.featurecount
+		#Picks the subset of variables to find splits if randomcolumns is -1 then the splits are the sqrt of 
+		#total columns.
+		if randomcolumns==-1:
+			mtry=int(math.sqrt(featurecount))
+			columns=random.sample(range(featurecount),mtry)
+		elif randomcolumns==None:
+			columns=range(featurecount)
+		else:
+			columns=random.sample(range(featurecount),randomcolumns)	
+
 		for col in columns:
-			#find column score for each row
-			predictorindex=column_count+col
-			current_score=self.scoref(rows,predictorindex)
-			if current_score == 0: 
-				min_var=col
-				min_col_value=current_score
-				break
-			elif current_score < min_col_value:
-				min_var=col
-				min_col_value=current_score
 			# Generate the list of different values in this column
 			column_values={}
 			for row in rows:
 				column_values[row[col]]=1
-			# Now try dividing the rows up for each value
-			# in this column
+			# Now try dividing the rows up for each value in this column
+			if len(column_values)==1: continue
 			for value in column_values.keys():
-				(set1,set2)=divideset(rows,col,value)
-
-			# Information gain
-			p=float(len(set1))/len(rows)
-			gain=current_score-p*scoref(set1,predictorindex)-(1-p)*scoref(set2,predictorindex)
-			if gain>best_gain and len(set1)>0 and len(set2)>0:
-				best_gain=gain
-				best_criteria=(col,value)
-				best_sets=(set1,set2)
-		#Create the sub branches   
+				(set1,set2)=self.divideset(rows,col,value)
+				if len(set1)==0 or len(set2)==0: continue			
+				# Information gain
+				gain=self.informationGain(current_score,set1,set2,rows)	
+				if gain>best_gain and len(set1)>0 and len(set2)>0:
+					best_gain=gain
+					best_criteria=(col,value)
+					best_sets=(set1,set2)
+#		# Create the sub branches   
 		if best_gain>0:
-			trueBranch=buildtree(best_sets[0],mtry=mtry)
-			falseBranch=buildtree(best_sets[1],mtry=mtry)
-			return decisionnode(col=best_criteria[0],value=best_criteria[1],tb=trueBranch,fb=falseBranch)
+			trueBranch=self.buildtree(best_sets[0],randomcolumns)
+			falseBranch=self.buildtree(best_sets[1],randomcolumns)	
+			return DecisionNode(col=best_criteria[0],value=best_criteria[1],
+			                    tb=trueBranch,fb=falseBranch,puritychg={best_criteria[0]:best_gain})
 		else:
-			return decisionnode(results=finaluniquecounts(rows,min_var))		
-	
-	
+			return DecisionNode(results=(len(rows),self.leafGini(rows)))
 			
 ####Miscellaneous Functions####
-
+	
 def read_data(filename,stringonly=0,dependantvar=-99):
 #Reads csv data in. stringonly=1 means that all values will be left as string.
 #otherwise  if stringonly =0 then all columns that are numbers are converted to float. 
@@ -592,4 +598,5 @@ def getmax(contenders):
 
 
 if __name__ == "__main__":
-	import TestAsym
+	#import TestAsym
+	import teststratum
