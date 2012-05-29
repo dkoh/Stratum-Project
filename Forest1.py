@@ -136,6 +136,18 @@ class ClassificationTree(Classifier):
 			print indent+'F->',
 			self.printtree(tree.fb,indent+'  ')
 	
+	#print information gain for each node
+	def printtree2a(self,tree=None):
+		col=1
+		if tree==None: tree=self.classifier[0]
+		if col in tree.puritychg or col+6 in tree.puritychg: print tree.puritychg
+		if tree.results==None:
+			# Print the criteria
+			if col in tree.puritychg or col+6 in tree.puritychg: print tree.puritychg
+			# Print the branches
+			self.printtree2(tree.fb)
+			self.printtree2(tree.tb)
+
 	def informationGain(self,current_score,set1,set2,rows):
 		p=float(len(set1))/len(rows)
 		gain=0
